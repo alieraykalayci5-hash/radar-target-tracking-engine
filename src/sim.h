@@ -19,6 +19,11 @@ struct SimConfig {
   double sigma_z = 3.0;     // position measurement std (m)
   double p_detect = 0.90;   // detection probability (miss logic)
 
+  // clutter / false alarms
+  bool enable_clutter = true;
+  int clutter_per_step = 6;       // how many false measurements each step
+  double clutter_area_half = 300; // uniform clutter in [-A, +A] for x,y
+
   // initial world
   double spawn_radius = 200.0;
   double speed_min = 5.0;
@@ -27,7 +32,7 @@ struct SimConfig {
 
 struct Measurement {
   int step;
-  uint32_t true_id; // 0 if unknown/clutter (we won’t generate clutter in v1)
+  uint32_t true_id; // 0 means clutter/unknown
   Vec2 z;
 };
 
@@ -49,4 +54,5 @@ private:
   std::vector<Measurement> meas_;
 
   void init_targets();
+  void add_clutter_measurements();
 };

@@ -31,6 +31,21 @@ void TargetSim2D::init_targets() {
   }
 }
 
+void TargetSim2D::add_clutter_measurements() {
+  if (!cfg_.enable_clutter) return;
+  for (int i = 0; i < cfg_.clutter_per_step; ++i) {
+    const double A = cfg_.clutter_area_half;
+    const double x = (rng_.uniform01() * 2.0 - 1.0) * A;
+    const double y = (rng_.uniform01() * 2.0 - 1.0) * A;
+
+    Measurement m;
+    m.step = step_;
+    m.true_id = 0; // clutter
+    m.z = Vec2(x, y);
+    meas_.push_back(m);
+  }
+}
+
 void TargetSim2D::step() {
   meas_.clear();
 
@@ -55,6 +70,9 @@ void TargetSim2D::step() {
     m.z = z;
     meas_.push_back(m);
   }
+
+  // add false alarms
+  add_clutter_measurements();
 
   step_ += 1;
 }

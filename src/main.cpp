@@ -3,6 +3,7 @@
 #include <vector>
 #include <filesystem>
 #include <cstdlib>
+#include <iomanip>
 
 #include "sim.h"
 #include "tracker.h"
@@ -25,8 +26,12 @@ static double parse_d(const char* s) {
   return std::atof(s);
 }
 
+static int parse_b(const char* s) {
+  return std::atoi(s) ? 1 : 0;
+}
+
 int main(int argc, char** argv) {
-  // Defaults (sane v1)
+  // Defaults (v2 with clutter enabled)
   uint64_t seed = 12345;
   int steps = 400;
   double dt = 0.05;
@@ -34,6 +39,11 @@ int main(int argc, char** argv) {
   int num_targets = 3;
   double sigma_z = 3.0;
   double p_detect = 0.90;
+
+  // clutter
+  int enable_clutter = 1;
+  int clutter_per_step = 6;
+  double clutter_area_half = 300.0;
 
   // KF process model
   double sigma_a = 1.5;
@@ -53,6 +63,11 @@ int main(int argc, char** argv) {
     else if (arg_eq(argv[i], "--sigma_z") && i + 1 < argc) sigma_z = parse_d(argv[++i]);
     else if (arg_eq(argv[i], "--p_detect") && i + 1 < argc) p_detect = parse_d(argv[++i]);
     else if (arg_eq(argv[i], "--sigma_a") && i + 1 < argc) sigma_a = parse_d(argv[++i]);
+
+    else if (arg_eq(argv[i], "--clutter") && i + 1 < argc) enable_clutter = parse_b(argv[++i]);
+    else if (arg_eq(argv[i], "--clutter_n") && i + 1 < argc) clutter_per_step = parse_i(argv[++i]);
+    else if (arg_eq(argv[i], "--clutter_A") && i + 1 < argc) clutter_area_half = parse_d(argv[++i]);
+
     else if (arg_eq(argv[i], "--gate_maha2") && i + 1 < argc) gate_maha2 = parse_d(argv[++i]);
     else if (arg_eq(argv[i], "--confirm_hits") && i + 1 < argc) confirm_hits = parse_i(argv[++i]);
     else if (arg_eq(argv[i], "--max_misses") && i + 1 < argc) max_misses = parse_i(argv[++i]);
@@ -67,6 +82,9 @@ int main(int argc, char** argv) {
         "  --sigma_z METERS\n"
         "  --p_detect P\n"
         "  --sigma_a\n"
+        "  --clutter 0|1\n"
+        "  --clutter_n N\n"
+        "  --clutter_A METERS\n"
         "  --gate_maha2\n"
         "  --confirm_hits\n"
         "  --max_misses\n"
@@ -83,6 +101,9 @@ int main(int argc, char** argv) {
   scfg.steps = steps;
   scfg.sigma_z = sigma_z;
   scfg.p_detect = p_detect;
+  scfg.enable_clutter = (enable_clutter != 0);
+  scfg.clutter_per_step = clutter_per_step;
+  scfg.clutter_area_half = clutter_area_half;
 
   TargetSim2D sim(seed, scfg);
 
@@ -104,7 +125,7 @@ int main(int argc, char** argv) {
   resid_csv.header("step,track_id,innov_x,innov_y,S00,S01,S10,S11");
 
   Fnv1a64 fnv;
-  fnv.add("RADAR_TRACKING_V1\n");
+  fnv.add("RADAR_TRACKING_V2\n");
   fnv.add_u64(seed);
 
   for (int step = 0; step < steps; ++step) {
@@ -129,7 +150,7 @@ int main(int argc, char** argv) {
                    << std::setprecision(17) << m.z.y() << "\n";
     }
 
-    // tracker step
+    // tracker step (association + gating will reject most clutter)
     tracker.step(z, dt, sigma_a, sigma_z);
 
     // log tracks + residuals
@@ -159,10 +180,8 @@ int main(int argc, char** argv) {
                     << "\n";
     }
 
-    // determinism hash: hash a subset of track output lines (stable)
-    // (This is a "golden-style" quick check; later smoke.sh gibi script ekleyeceğiz.)
+    // determinism hash: hash track lines (stable-format)
     for (const auto& tr : tracks) {
-      // Quantization-free but text-based stable because we control precision.
       std::string line =
         std::to_string(step) + "," + std::to_string(tr.id) + "," + std::to_string(tr.confirmed ? 1 : 0) + "," +
         std::to_string(tr.kf.x(0)) + "," + std::to_string(tr.kf.x(1)) + "," +
