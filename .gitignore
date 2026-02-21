@@ -1,16 +1,33 @@
-# Build
+# build outputs
 build/
+CMakeCache.txt
+CMakeFiles/
+cmake_install.cmake
+compile_commands.json
+*.ninja
+*.ninja_deps
+*.ninja_log
+
+# runtime outputs
 out/
+out_*/
+cross_*/
 
-# VS Code
-.vscode/
-
-# Binaries
+# binaries
 *.exe
 *.obj
 *.o
-*.log
+*.a
+*.lib
+*.dll
 
-# OS
+# OS / editor
+.vscode/
 .DS_Store
 Thumbs.db
+
+# python
+__pycache__/
+*.pyc
+.venv/
+venv/
