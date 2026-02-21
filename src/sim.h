@@ -4,10 +4,15 @@
 #include "math_types.h"
 #include "rng.h"
 
-struct TrueTarget {
-  uint32_t id;
-  Vec2 pos;
-  Vec2 vel;
+struct TruthTarget {
+  int id = 0;
+  Vec2 pos = Vec2::Zero();
+  Vec2 vel = Vec2::Zero();
+};
+
+struct Measurement {
+  int true_id = 0;   // 0 = clutter / false alarm
+  Vec2 z = Vec2::Zero();
 };
 
 struct SimConfig {
@@ -15,44 +20,35 @@ struct SimConfig {
   double dt = 0.05;
   int steps = 400;
 
-  // measurement model
-  double sigma_z = 3.0;     // position measurement std (m)
-  double p_detect = 0.90;   // detection probability (miss logic)
+  double sigma_z = 3.0;
+  double p_detect = 0.90;
 
-  // clutter / false alarms
   bool enable_clutter = true;
-  int clutter_per_step = 6;       // how many false measurements each step
-  double clutter_area_half = 300; // uniform clutter in [-A, +A] for x,y
+  int clutter_per_step = 6;
+  double clutter_area_half = 300.0;
 
-  // initial world
-  double spawn_radius = 200.0;
-  double speed_min = 5.0;
-  double speed_max = 20.0;
-};
-
-struct Measurement {
-  int step;
-  uint32_t true_id; // 0 means clutter/unknown
-  Vec2 z;
+  // scenario selection
+  bool scenario_cross = false;
 };
 
 class TargetSim2D {
 public:
-  TargetSim2D(uint64_t seed, SimConfig cfg);
+  TargetSim2D(uint64_t seed, const SimConfig& cfg);
 
   void step();
 
-  int step_index() const { return step_; }
-  const std::vector<TrueTarget>& truth() const { return truth_; }
-  const std::vector<Measurement>& last_measurements() const { return meas_; }
+  const std::vector<TruthTarget>& truth() const { return truth_; }
+  const std::vector<Measurement>& last_measurements() const { return last_meas_; }
 
 private:
-  Rng rng_;
   SimConfig cfg_;
-  int step_ = 0;
-  std::vector<TrueTarget> truth_;
-  std::vector<Measurement> meas_;
+  Rng rng_;
+  int step_idx_ = 0;
 
-  void init_targets();
-  void add_clutter_measurements();
+  std::vector<TruthTarget> truth_;
+  std::vector<Measurement> last_meas_;
+
+  void init_random();
+  void init_cross();
+  void gen_measurements();
 };

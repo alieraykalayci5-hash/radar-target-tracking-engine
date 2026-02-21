@@ -1,39 +1,36 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-cd "$ROOT_DIR"
+ROOT="$(cd "$(dirname "$0")/.." && pwd)"
+cd "$ROOT"
 
-# Golden run config (v2)
-SEED=123
-STEPS=200
-EXPECTED="965aba7046dee0b6"
+cmake -S . -B build -G Ninja >/dev/null
+cmake --build build -j >/dev/null
 
-# Build
-cmake -S . -B build -G Ninja
-cmake --build build -j
-
-# Run (stderr contains FNV line)
 OUTDIR="out_smoke"
 rm -rf "$OUTDIR"
 mkdir -p "$OUTDIR"
 
-FNV_LINE="$("./build/radar_tracker.exe" --steps "$STEPS" --seed "$SEED" \
-  --out "$OUTDIR" --clutter 1 --clutter_n 20 --clutter_A 400 \
-  2>&1 >/dev/null | grep -E "^FNV1A64=" || true)"
+# Golden scenario: ambiguous cross + higher noise + wide gate, clutter off.
+EXPECTED="__EXPECTED_HASH__"
 
-if [[ -z "${FNV_LINE}" ]]; then
-  echo "[SMOKE] FAIL: FNV1A64 line not found"
-  exit 1
-fi
-
-GOT="${FNV_LINE#FNV1A64=}"
+GOT="$(./build/radar_tracker.exe \
+  --scenario cross \
+  --steps 400 \
+  --seed 123 \
+  --out "$OUTDIR" \
+  --hungarian 1 \
+  --clutter 0 \
+  --p_detect 1.0 \
+  --sigma_z 15 \
+  --gate_maha2 50 \
+  2>&1 | sed -n 's/^FNV1A64=//p' | head -n 1)"
 
 echo "[SMOKE] expected=$EXPECTED"
 echo "[SMOKE] got     =$GOT"
 
 if [[ "$GOT" != "$EXPECTED" ]]; then
-  echo "[SMOKE] FAIL: hash mismatch"
+  echo "[SMOKE] FAIL"
   exit 1
 fi
 

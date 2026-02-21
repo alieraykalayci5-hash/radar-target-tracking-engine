@@ -16,6 +16,8 @@ add_executable(radar_tracker
   src/sim.h
   src/sim.cpp
   src/csv.h
+  src/hungarian.h
+  src/hungarian.cpp
 )
 
 # Eigen3 (header-only)
