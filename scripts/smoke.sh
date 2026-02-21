@@ -12,7 +12,7 @@ rm -rf "$OUTDIR"
 mkdir -p "$OUTDIR"
 
 # Golden scenario: ambiguous cross + higher noise + wide gate, clutter off.
-EXPECTED="__EXPECTED_HASH__"
+EXPECTED="9c3d2602b240fd45"
 
 GOT="$(./build/radar_tracker.exe \
   --scenario cross \
