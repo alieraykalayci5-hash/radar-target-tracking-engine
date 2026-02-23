@@ -1,5 +1,9 @@
 # Radar Target Tracking Engine
 
+![C++17](https://img.shields.io/badge/C%2B%2B-17-blue)
+![Deterministic](https://img.shields.io/badge/Simulation-Deterministic-success)
+![License: MIT](https://img.shields.io/badge/License-MIT-yellow)
+
 Deterministic 2D multi-target radar tracking engine in C++17 implementing:
 
 - Constant-Velocity Kalman Filter
@@ -8,14 +12,25 @@ Deterministic 2D multi-target radar tracking engine in C++17 implementing:
 - Greedy & Hungarian data association
 - Deterministic simulation with golden-hash verification
 
-This project focuses purely on state estimation and tracking logic.  
+This project focuses exclusively on state estimation and multi-target tracking logic.  
 Visualization is provided separately via Python plotting scripts.
+
+## Quick Start
+
+Minimal build and run example:
+
+```bash
+cmake -S . -B build -G Ninja
+cmake --build build -j
+./build/radar_tracker.exe --scenario cross --hungarian 1
+```
 
 ---
 
 ## Example Output (Cross Scenario, Hungarian)
 
 ![Truth vs Track Estimates](plots/tracks_out_smoke.png)
+
 ![NIS per Track](plots/nis_out_smoke.png)
 
 The figures above show:
@@ -25,9 +40,9 @@ The figures above show:
 
 ---
 
-# 1. System Overview
+## System Overview
 
-This repository implements a full deterministic radar tracking pipeline.
+This repository implements a fully deterministic end-to-end radar tracking pipeline.
 
 ## Motion & Measurement Model
 
@@ -70,44 +85,40 @@ This repository implements a full deterministic radar tracking pipeline.
 
 Golden hash (cross scenario, seed=123):
 
-
+```text
 FNV1A64=9c3d2602b240fd45
+```
 
+## Repository Structure
 
----
-
-# 2. Repository Structure
-
-
+```text
 src/
-main.cpp
-sim.cpp / sim.h
-tracker.cpp / tracker.h
-kalman.cpp / kalman.h
-hungarian.cpp / hungarian.h
-math_types.h
-rng.h
-csv.h
-fnv1a.h
+  main.cpp
+  sim.cpp / sim.h
+  tracker.cpp / tracker.h
+  kalman.cpp / kalman.h
+  hungarian.cpp / hungarian.h
+  math_types.h
+  rng.h
+  csv.h
+  fnv1a.h
 
 scripts/
-smoke.sh
+  smoke.sh
 
 tools/
-plot_tracks.py
-plot_nis.py
-requirements.txt
+  plot_tracks.py
+  plot_nis.py
+  requirements.txt
 
 plots/
-tracks_out_smoke.png
-nis_out_smoke.png
+  tracks_out_smoke.png
+  nis_out_smoke.png
+```
 
+## Build (Windows – MSYS2 UCRT64 example)
 
----
-
-# 3. Build (Windows – MSYS2 UCRT64)
-
-## Install Dependencies
+### Install Dependencies
 
 ```bash
 pacman -S --needed \
@@ -115,14 +126,21 @@ pacman -S --needed \
   mingw-w64-ucrt-x86_64-cmake \
   mingw-w64-ucrt-x86_64-ninja \
   mingw-w64-ucrt-x86_64-eigen3
-Configure and Build
+```
+
+### Configure and Build
+
+```bash
 cd /c/Users/AliEray/Desktop/Staj-Proje/radar-target-tracking-engine
 cmake -S . -B build -G Ninja
 cmake --build build -j
-4. Running the Simulation
+```
 
-Example (cross scenario, Hungarian enabled):
+## Running the Simulation
 
+Example run (cross scenario, Hungarian enabled):
+
+```bash
 ./build/radar_tracker.exe \
   --steps 400 \
   --seed 123 \
@@ -133,9 +151,11 @@ Example (cross scenario, Hungarian enabled):
   --sigma_z 15 \
   --gate_maha2 50 \
   --out out_smoke
+```
 
 Expected output:
 
+```text
 FNV1A64=9c3d2602b240fd45
 Wrote logs to: out_smoke
 Files: truth.csv, meas.csv, tracks.csv, residuals.csv
@@ -149,26 +169,28 @@ measurements_total=800 clutter_total=0
 tracks_created_estimate=2 tracks_alive_final=2 confirmed_final=2
 assoc_updates=784 maha2_avg=1.88318
 steps_per_sec ≈ 1.3e4
-5. Output Files
+```
 
-Each run generates:
+## Output Files
 
-truth.csv — ground-truth states
+Each run generates the following files:
 
-meas.csv — noisy radar measurements (+ clutter if enabled)
+- `truth.csv` — Ground-truth target states
+- `meas.csv` — Noisy radar measurements (including clutter if enabled)
+- `tracks.csv` — Estimated track states
+- `residuals.csv` — Innovation and covariance statistics
 
-tracks.csv — estimated track states
-
-residuals.csv — innovation and covariance statistics
-
-6. Association Comparison
+## Association Comparison
 
 Built-in demo:
 
+```bash
 ./build/radar_tracker.exe --assoc_demo 1
+```
 
 Example output:
 
+```text
 === ASSOC DEMO (Greedy vs Hungarian) ===
 cost matrix:
   row 0: 1, 2
@@ -176,112 +198,115 @@ cost matrix:
 
 greedy assignment: 0->0, 1->1  total_cost=101
 hungarian assignment: 0->1, 1->0  total_cost=4
+```
 
 Demonstrates why global assignment can outperform greedy matching.
 
-7. Visualization (Python Tools)
+## Visualization (Python Tools)
 
 Install plotting dependencies:
 
+```bash
 python -m pip install -r tools/requirements.txt
+```
 
 Generate plots:
 
+```bash
 python tools/plot_tracks.py --in out_smoke
 python tools/plot_nis.py --in out_smoke
+```
 
 Outputs:
 
-plots/tracks_out_smoke.png
-
-plots/nis_out_smoke.png
+- plots/tracks_out_smoke.png
+- plots/nis_out_smoke.png
 
 These plots validate:
 
-Stable estimation
+- Stable estimation
+- No ID swaps (cross scenario)
+- Proper statistical consistency
 
-No ID swaps (cross scenario)
+## Deterministic Smoke Test
 
-Proper statistical consistency
-
-8. Deterministic Smoke Test
+```bash
 chmod +x scripts/smoke.sh
 ./scripts/smoke.sh
+```
 
 Expected:
 
+```text
 [SMOKE] expected=9c3d2602b240fd45
 [SMOKE] got     =9c3d2602b240fd45
 [SMOKE] PASS
+```
 
 If the hash changes, simulation behavior or output formatting changed.
 
-9. CLI Parameters
-Parameter	Description
---steps	Number of simulation steps
---dt	Timestep
---targets	Number of targets
---sigma_z	Measurement noise std
---sigma_a	Process noise std
---p_detect	Detection probability
---clutter	Enable clutter (0/1)
---clutter_n	Clutter per step
---clutter_A	Clutter area half-size
---gate_maha2	Mahalanobis gate threshold
---confirm_M	Confirmation hits
---confirm_N	Confirmation window
---hungarian	Use global assignment
---scenario	Scenario type (default/cross)
---seed	Random seed
---out	Output directory
-10. Performance Characteristics
+---
+
+## CLI Parameters
+
+| Parameter      | Description                          |
+|---------------|--------------------------------------|
+| --steps       | Number of simulation steps           |
+| --dt          | Timestep                             |
+| --targets     | Number of targets                    |
+| --sigma_z     | Measurement noise std                |
+| --sigma_a     | Process noise std                    |
+| --p_detect    | Detection probability                |
+| --clutter     | Enable clutter (0/1)                 |
+| --clutter_n   | Clutter per step                     |
+| --clutter_A   | Clutter area half-size               |
+| --gate_maha2  | Mahalanobis gate threshold           |
+| --confirm_M   | Confirmation hits                    |
+| --confirm_N   | Confirmation window                  |
+| --hungarian   | Use global assignment                |
+| --scenario    | Scenario type (default / cross)      |
+| --seed        | Random seed                          |
+| --out         | Output directory                     |
+
+## Performance Characteristics
 
 Example benchmark (cross scenario, no clutter):
 
+```text
 steps=400
 targets=2
 sigma_z=15
 hungarian=1
 steps_per_sec ≈ 1.3e4
+```
 
-Performance is deterministic and reproducible.
+Performance is deterministic and reproducible under identical seeds and parameters.
 
-11. Engineering Highlights
+## Engineering Highlights
 
-Fully deterministic simulation core
+- Fully deterministic simulation core
+- Regression-detecting golden hash
+- Multi-target lifecycle management
+- Configurable clutter model
+- Greedy vs Hungarian comparison
+- Statistical validation via NIS
+- Clean CMake-based build
+- Eigen-based linear algebra
 
-Regression-detecting golden hash
+## Technologies
 
-Multi-target lifecycle management
+- C++17
+- Eigen (linear algebra)
+- CMake
+- Ninja
+- Python (NumPy, Matplotlib)
 
-Configurable clutter model
-
-Greedy vs Hungarian comparison
-
-Statistical validation via NIS
-
-Clean CMake-based build
-
-Eigen-based linear algebra
-
-12. Technologies
-
-C++17
-
-Eigen (linear algebra)
-
-CMake
-
-Ninja
-
-Python (matplotlib, numpy)
-
-13. License
+## License
 
 MIT
 
-Author
+## Author
 
-Ali Eray Kalaycı
-Computer Engineering
+Ali Eray Kalaycı  
+Computer Engineering  
 Focus: Real-Time Systems, Tracking & Estimation, Autonomous Systems
