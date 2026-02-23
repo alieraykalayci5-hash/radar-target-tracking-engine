@@ -1,85 +1,115 @@
-Radar Target Tracking Engine
+# Radar Target Tracking Engine
 
-Deterministic 2D multi-target radar tracking engine in C++17 implementing a constant-velocity Kalman Filter, Mahalanobis gating, multi-target data association (Greedy & Hungarian), and reproducible simulation with golden-hash verification.
+Deterministic 2D multi-target radar tracking engine in C++17 implementing:
 
-This project focuses purely on state estimation and tracking logic.
+- Constant-Velocity Kalman Filter
+- Mahalanobis gating
+- Multi-target track lifecycle management
+- Greedy & Hungarian data association
+- Deterministic simulation with golden-hash verification
+
+This project focuses purely on state estimation and tracking logic.  
 Visualization is provided separately via Python plotting scripts.
 
-1. System Overview
+---
 
-This repository implements a full tracking pipeline.
+## Example Output (Cross Scenario, Hungarian)
 
-Motion & Measurement Model
+![Truth vs Track Estimates](plots/tracks_out_smoke.png)
+![NIS per Track](plots/nis_out_smoke.png)
 
-2D constant-velocity (CV) motion model
+The figures above show:
 
-State vector: [x, y, vx, vy]^T
+- Ground truth vs track estimates (no ID swaps in cross scenario)
+- NIS statistical behavior for consistency validation
 
-Discrete white-noise acceleration process model
+---
 
-Gaussian radar measurements (position only)
+# 1. System Overview
 
-Configurable detection probability
+This repository implements a full deterministic radar tracking pipeline.
 
-Optional uniform clutter injection
+## Motion & Measurement Model
 
-Estimation Core
+- 2D constant-velocity (CV) motion model
+- State vector: `[x, y, vx, vy]^T`
+- Discrete white-noise acceleration process model
+- Gaussian radar measurements (position only)
+- Configurable detection probability
+- Optional uniform clutter injection
 
-Kalman Filter (predict-update)
+---
 
-Innovation computation
+## Estimation Core
 
-Innovation covariance (S)
+- Kalman Filter (predict-update)
+- Innovation computation
+- Innovation covariance (S)
+- NIS (Normalized Innovation Squared)
+- Mahalanobis-distance gating
 
-NIS (Normalized Innovation Squared)
+---
 
-Mahalanobis-distance gating
+## Multi-Target Tracking
 
-Multi-Target Tracking
+- Track IDs
+- Missed detection handling
+- Track initiation from unassigned measurements
+- Track termination via miss threshold
+- M-of-N confirmation logic
+- Greedy nearest-neighbor association
+- Hungarian global assignment (optional)
 
-Track IDs
+---
 
-Missed detection handling
+## Determinism & Reproducibility
 
-Track initiation from unassigned measurements
+- Fixed random seed
+- FNV-1a 64-bit hash of simulation outputs
+- Smoke test for regression detection
 
-Track termination via miss threshold
+Golden hash (cross scenario, seed=123):
 
-M-of-N confirmation logic
 
-Greedy nearest-neighbor association
+FNV1A64=9c3d2602b240fd45
 
-Hungarian global assignment (optional)
 
-Determinism & Reproducibility
+---
 
-Fixed random seed
+# 2. Repository Structure
 
-FNV-1a 64-bit hash of simulation outputs
 
-Smoke test for regression detection
-
-2. Repository Structure
 src/
-  main.cpp
-  sim.cpp / sim.h
-  tracker.cpp / tracker.h
-  kalman.cpp / kalman.h
-  hungarian.cpp / hungarian.h
-  math_types.h
-  rng.h
-  csv.h
-  fnv1a.h
+main.cpp
+sim.cpp / sim.h
+tracker.cpp / tracker.h
+kalman.cpp / kalman.h
+hungarian.cpp / hungarian.h
+math_types.h
+rng.h
+csv.h
+fnv1a.h
 
 scripts/
-  smoke.sh
+smoke.sh
 
 tools/
-  plot_tracks.py
-  plot_nis.py
-  requirements.txt
-3. Build (Windows – MSYS2 UCRT64)
-Install Dependencies
+plot_tracks.py
+plot_nis.py
+requirements.txt
+
+plots/
+tracks_out_smoke.png
+nis_out_smoke.png
+
+
+---
+
+# 3. Build (Windows – MSYS2 UCRT64)
+
+## Install Dependencies
+
+```bash
 pacman -S --needed \
   mingw-w64-ucrt-x86_64-toolchain \
   mingw-w64-ucrt-x86_64-cmake \
@@ -87,12 +117,11 @@ pacman -S --needed \
   mingw-w64-ucrt-x86_64-eigen3
 Configure and Build
 cd /c/Users/AliEray/Desktop/Staj-Proje/radar-target-tracking-engine
-
 cmake -S . -B build -G Ninja
 cmake --build build -j
 4. Running the Simulation
 
-Example:
+Example (cross scenario, Hungarian enabled):
 
 ./build/radar_tracker.exe \
   --steps 400 \
@@ -110,6 +139,16 @@ Expected output:
 FNV1A64=9c3d2602b240fd45
 Wrote logs to: out_smoke
 Files: truth.csv, meas.csv, tracks.csv, residuals.csv
+
+=== RUN SUMMARY ===
+scenario=cross
+hungarian=1
+steps=400 dt=0.05 targets=2 sigma_z=15 p_detect=1 clutter=0 clutter_n=6 clutter_A=300
+confirm_M=3 confirm_N=5
+measurements_total=800 clutter_total=0
+tracks_created_estimate=2 tracks_alive_final=2 confirmed_final=2
+assoc_updates=784 maha2_avg=1.88318
+steps_per_sec ≈ 1.3e4
 5. Output Files
 
 Each run generates:
@@ -135,8 +174,8 @@ cost matrix:
   row 0: 1, 2
   row 1: 2, 100
 
-greedy assignment:    total_cost = 101
-hungarian assignment: total_cost = 4
+greedy assignment: 0->0, 1->1  total_cost=101
+hungarian assignment: 0->1, 1->0  total_cost=4
 
 Demonstrates why global assignment can outperform greedy matching.
 
@@ -154,6 +193,7 @@ python tools/plot_nis.py --in out_smoke
 Outputs:
 
 plots/tracks_out_smoke.png
+
 plots/nis_out_smoke.png
 
 These plots validate:
@@ -162,7 +202,7 @@ Stable estimation
 
 No ID swaps (cross scenario)
 
-Proper statistical behavior
+Proper statistical consistency
 
 8. Deterministic Smoke Test
 chmod +x scripts/smoke.sh
@@ -202,7 +242,7 @@ steps=400
 targets=2
 sigma_z=15
 hungarian=1
-steps_per_sec ≈ 13,000
+steps_per_sec ≈ 1.3e4
 
 Performance is deterministic and reproducible.
 
